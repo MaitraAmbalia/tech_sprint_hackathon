@@ -1,11 +1,6 @@
 import axios from 'axios';
 
-const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // Your Express Backend URL
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+const BASE_URL = import.meta.env.MODE === 'development' ? 'http://localhost:5000/api' : '/api';
 
 // Add a token to every request if the user is logged in
 api.interceptors.request.use((config) => {
