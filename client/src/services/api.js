@@ -1,10 +1,11 @@
 import axios from 'axios';
 
-// Automatically switch between Localhost and Vercel URL
+// 1. Determine the correct URL
 const BASE_URL = import.meta.env.MODE === 'development' 
   ? 'http://localhost:5000/api' 
   : '/api';
 
+// 2. CREATE THE API INSTANCE (This part was likely missing!)
 const api = axios.create({
   baseURL: BASE_URL,
   headers: {
@@ -12,7 +13,7 @@ const api = axios.create({
   },
 });
 
-// Add a token to every request if the user is logged in
+// 3. Add the Interceptor (This is where your error was happening)
 api.interceptors.request.use((config) => {
   const user = JSON.parse(localStorage.getItem('user'));
   if (user?.token) {
@@ -21,5 +22,5 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// CRITICAL: You must export it!
+// 4. Export it
 export default api;
