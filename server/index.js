@@ -1,35 +1,65 @@
 const express = require('express');
-const app = express();
 const cors = require('cors');
-const connectDB = require('./config/db'); //
+const mongoose = require('mongoose');
 require('dotenv').config();
 
-// 1. Connect to Database
-connectDB();
+// Import Routes
+const authRoutes = require('../routes/auth');
+const goalRoutes = require('../routes/goals');
+const userRoutes = require('../routes/userRoutes');
+const aiRoutes = require('../routes/ai');
+const youtubeRoutes = require('../routes/youtube');
 
-// 2. Middleware
+const app = express();
+
+// Middleware
+app.use(cors({
+    origin: '*', // Allow all origins (or set to your frontend URL in production)
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    credentials: true
+}));
 app.use(express.json());
-app.use(cors());
 
-// 3. Define Routes (Make sure these paths match your actual files)
-app.use('/api/auth', require('./routes/auth')); //
-app.use('/api/goals', require('./routes/goals')); //
-app.use('/api/users', require('./routes/userRoutes')); //
-app.use('/api/ai', require('./routes/ai')); //
-app.use('/api/youtube', require('./routes/youtube')); //
+// Database Connection (Optimized for Serverless)
+let cached = global.mongoose;
 
-// 4. Test Route (Optional)
-app.get('/', (req, res) => {
-  res.send('API is running...');
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+async function connectToDatabase() {
+  if (cached.conn) return cached.conn;
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false, // Disable buffering
+    };
+
+    cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((mongoose) => {
+      return mongoose;
+    });
+  }
+  cached.conn = await cached.promise;
+  return cached.conn;
+}
+
+// Ensure DB is connected for every request
+app.use(async (req, res, next) => {
+    await connectToDatabase();
+    next();
 });
 
-// ============================================================
-// CRITICAL CHANGE FOR VERCEL: Export the App
-// ============================================================
-module.exports = app;
+// Mount Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/goals', goalRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/youtube', youtubeRoutes);
 
-// Only listen on a port if we are NOT in production (Vercel handles the port automatically)
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
-}
+// Health Check
+app.get('/', (req, res) => {
+    res.send('YT Focus API is Running');
+});
+
+// Export for Vercel
+module.exports = app;
